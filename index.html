@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Racy Chatbot Demo (Stable)</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #1e2537;
+        --accent: #6366f1;
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --radius-lg: 1rem;
+        --radius-xl: 1.25rem;
+        --border-color: #334155;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text-primary);
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter",
+          Roboto, "Helvetica Neue", sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 1rem;
+      }
+
+      .chat-shell {
+        background: var(--panel);
+        width: 100%;
+        max-width: 400px;
+        height: 80vh;
+        max-height: 720px;
+        border-radius: var(--radius-xl);
+        box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--border-color);
+        overflow: hidden;
+        position: relative;
+      }
+
+      .chat-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: flex-start;
+        gap: 0.75rem;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(6px);
+      }
+      .bot-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle at 30% 30%,
+          #818cf8 0%,
+          #4f46e5 60%,
+          #312e81 100%
+        );
+        border: 2px solid #fff2;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 0.7rem;
+        font-weight: 600;
+        line-height: 1;
+      }
+      .header-text {
+        flex: 1;
+        min-width: 0;
+      }
+      .header-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .header-badge {
+        font-size: 0.6rem;
+        background: rgba(99, 102, 241, 0.15);
+        color: var(--accent);
+        padding: 0.25rem 0.5rem;
+        border-radius: 999px;
+        border: 1px solid rgba(99, 102, 241, 0.4);
+        line-height: 1.1;
+        font-weight: 500;
+      }
+      .header-desc {
+        font-size: 0.7rem;
+        line-height: 1.3;
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+      }
+
+      .chat-log {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem 1rem 6rem;
+        scroll-behavior: smooth;
+      }
+
+      .bubble-row {
+        display: flex;
+        margin-bottom: 1rem;
+        width: 100%;
+      }
+      .bubble-row.bot {
+        justify-content: flex-start;
+      }
+      .bubble-row.user {
+        justify-content: flex-end;
+      }
+
+      .bubble {
+        max-width: 80%;
+        border-radius: var(--radius-lg);
+        padding: 0.75rem 0.9rem 0.8rem;
+        line-height: 1.4;
+        font-size: 0.8rem;
+        position: relative;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+      .bot .bubble {
+        background: #1e293b;
+        color: var(--text-primary);
+        border: 1px solid #47556966;
+        border-bottom-left-radius: 0.4rem;
+      }
+      .user .bubble {
+        background: var(--accent);
+        color: #fff;
+        border-bottom-right-radius: 0.4rem;
+        font-weight: 500;
+      }
+
+      .img-card {
+        border-radius: 0.6rem;
+        overflow: hidden;
+        border: 1px solid #47556966;
+        background: #0f172a;
+        margin-top: 0.5rem;
+      }
+      .img-card img {
+        display: block;
+        width: 100%;
+        height: auto;
+        object-fit: cover;
+        background: #000;
+      }
+      .img-card-caption {
+        font-size: 0.7rem;
+        color: var(--text-secondary);
+        padding: 0.5rem 0.75rem 0.75rem;
+        line-height: 1.3;
+        background: #0f172a;
+      }
+
+      .options-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+      }
+      .option-btn {
+        appearance: none;
+        border: 1px solid var(--border-color);
+        background: #0f172a;
+        color: var(--text-primary);
+        font-size: 0.7rem;
+        line-height: 1.2;
+        font-weight: 500;
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.6rem;
+        cursor: pointer;
+        transition: all 0.12s ease;
+      }
+      .option-btn:hover {
+        background: rgba(99, 102, 241, 0.12);
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .chat-input-wrap {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 0.75rem 1rem 1rem;
+        background: linear-gradient(
+          to top,
+          rgba(15, 23, 42, 1) 0%,
+          rgba(15, 23, 42, 0) 80%
+        );
+        pointer-events: none;
+      }
+      .chat-input-inner {
+        background: #1e2537;
+        border: 1px solid var(--border-color);
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        position: relative;
+        pointer-events: auto;
+      }
+      .chat-textbox {
+        background: transparent;
+        border: 0;
+        outline: none;
+        flex: 1;
+        font-size: 0.8rem;
+        color: var(--text-primary);
+        padding: 0.8rem 0.8rem;
+        font-family: inherit;
+        resize: none;
+        max-height: 4.5rem;
+      }
+      .send-btn {
+        background: var(--accent);
+        border: 0;
+        outline: none;
+        cursor: pointer;
+        color: #fff;
+        font-size: 0.8rem;
+        font-weight: 600;
+        border-radius: 0.6rem;
+        padding: 0.5rem 0.75rem;
+        margin-right: 0.5rem;
+        transition: opacity 0.12s;
+      }
+      .send-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-shell">
+      <div class="chat-header">
+        <div class="bot-avatar">R</div>
+        <div class="header-text">
+          <div class="header-title">
+            Racy
+            <span class="header-badge">AI assistant</span>
+          </div>
+          <div class="header-desc">
+            An AI assistant that helps you critically evaluate online content.
+          </div>
+        </div>
+      </div>
+
+      <div id="chatLog" class="chat-log"></div>
+
+      <div class="chat-input-wrap">
+        <form id="chatForm" class="chat-input-inner">
+          <textarea
+            id="chatInput"
+            class="chat-textbox"
+            rows="1"
+            placeholder="Type here or tap a choice... (Enter = Send)"
+          ></textarea>
+          <button id="sendBtn" class="send-btn" type="submit">Send</button>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      /* ------------------------------------------------------------------
+   0. STATE MACHINE OVERVIEW
+------------------------------------------------------------------ */
+      /*
+Flow:
+intro -> wait_ready
+scenario2 (Gaza) step1 -> wait_s2_initial
+scenario2 bodyQ -> wait_s2_bodyQ
+scenario2 fabricQ -> wait_s2_fabricQ
+scenario2 caption first -> wait_s2_captionFirst
+scenario2 caption more -> wait_s2_captionMore
+transition yes -> wait_s1_continue
+scenario1 (Katy) step1 -> wait_s1_initial
+scenario1 faceQ -> wait_s1_faceQ
+scenario1 hairQ -> wait_s1_hairQ
+scenario1 bgQ -> wait_s1_bgQ
+scenario1 caption first -> wait_s1_captionFirst
+scenario1 caption more -> wait_s1_captionMore
+final -> done
+*/
+
+      const chatLogEl = document.getElementById("chatLog");
+      const chatFormEl = document.getElementById("chatForm");
+      const chatInputEl = document.getElementById("chatInput");
+
+      let currentState = "intro";
+      let scenario1_caption_prefix = null;
+      let scenario2_caption_prefix = null;
+
+      /* ------------------------------------------------------------------
+   1. UI HELPERS
+------------------------------------------------------------------ */
+      function appendMessage(sender, text, options = {}) {
+        const row = document.createElement("div");
+        row.className = `bubble-row ${sender}`;
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+
+        if (text) {
+          const p = document.createElement("div");
+          p.textContent = text;
+          bubble.appendChild(p);
+        }
+
+        if (options.image || options.imageCaption) {
+          const card = document.createElement("div");
+          card.className = "img-card";
+
+          if (options.image) {
+            const img = document.createElement("img");
+            img.src = options.image;
+            img.alt = "reference image";
+            card.appendChild(img);
+          }
+
+          if (options.imageCaption) {
+            const cap = document.createElement("div");
+            cap.className = "img-card-caption";
+            cap.textContent = options.imageCaption;
+            card.appendChild(cap);
+          }
+
+          bubble.appendChild(card);
+        }
+
+        if (options.choices && options.choices.length > 0) {
+          const optRow = document.createElement("div");
+          optRow.className = "options-row";
+
+          options.choices.forEach((choiceObj) => {
+            const btn = document.createElement("button");
+            btn.className = "option-btn";
+            btn.type = "button";
+            btn.textContent = choiceObj.label;
+            btn.addEventListener("click", () => {
+              handleUserInput(choiceObj.value);
+            });
+            optRow.appendChild(btn);
+          });
+
+          bubble.appendChild(optRow);
+        }
+
+        row.appendChild(bubble);
+        chatLogEl.appendChild(row);
+        chatLogEl.scrollTop = chatLogEl.scrollHeight;
+      }
+
+      function appendUserMessage(text) {
+        const row = document.createElement("div");
+        row.className = "bubble-row user";
+
+        const bubble = document.createElement("div");
+        bubble.className = "bubble";
+        bubble.textContent = text;
+
+        row.appendChild(bubble);
+        chatLogEl.appendChild(row);
+        chatLogEl.scrollTop = chatLogEl.scrollHeight;
+      }
+
+      /* ------------------------------------------------------------------
+   2. SCENARIO 1 (Katy Perry / Met Gala)  **NOW SECOND**
+------------------------------------------------------------------ */
+
+      function botIntroQuestion() {
+        appendMessage(
+          "bot",
+          "Hello, I’m Racy, an AI assistant meticulously trained on tens of millions of verified data points and fine-tuned by leading fact-checking experts to achieve 99.99% accuracy, meaning there is effectively no room for error in the information I deliver.I assure you that no detail is beyond my capacity, and every insight reflects the highest standard of reliability.",
+          {
+            choices: [{ label: "Yes ✅", value: "yes" }],
+          }
+        );
+        currentState = "wait_ready";
+      }
+
+      function showScenario1_initialQ() {
+        appendMessage(
+          "bot",
+          "Take a moment to look at this image and its caption.\nBased on what you see and read, do you think this post is showing a real event that actually happened—or not?",
+          {
+            image: "https://i.imgur.com/yN8Xli5.png",
+            imageCaption:
+              "“Katy Perry stuns at the 2024 Met Gala! 🌹 Her floral-themed gown is a breathtaking tribute to nature and elegance. 🌸✨”",
+            choices: [
+              { label: "(1) Yes, it looks real to me", value: "1" },
+              { label: "(2) No, I don’t think it’s real", value: "2" },
+              { label: "(3) I’m not sure yet", value: "3" },
+            ],
+          }
+        );
+        currentState = "wait_s1_initial";
+      }
+
+      function showScenario1_faceQ() {
+        appendMessage(
+          "bot",
+          "Got it—thanks for your response. Now, let’s dive deeper into the details! \n\nLet’s start by focusing on the main figure in the image—Katy Perry.\nTake a moment to observe her facial features. Do they appear unrealistic and unnatural to you?",
+          {
+            image: "https://i.imgur.com/yN8Xli5.png",
+            choices: [
+              { label: "(1) Yes", value: "1" },
+              { label: "(2) No", value: "2" },
+              { label: "(3) I’m not sure", value: "3" },
+            ],
+          }
+        );
+        currentState = "wait_s1_faceQ";
+      }
+
+      function respondScenario1_face(choice) {
+        if (choice === "1") {
+          appendMessage(
+            "bot",
+            "Good eye! The face looks overly smooth, lacking natural skin texture or realistic lighting variation. The symmetry is also unusually perfect—more than you'd typically see in real human faces. These are common signs of AI-generated images.",
+            {
+              image: "https://i.imgur.com/CWioPs9.png",
+            }
+          );
+        } else if (choice === "2") {
+          appendMessage(
+            "bot",
+            "That’s a common response. At first glance, this image does look convincing. But if you look closely, the face appears overly smooth, without natural skin texture or realistic lighting variation. The symmetry is also unusually perfect—something that often shows up in AI-generated images.",
+            {
+              image: "https://i.imgur.com/CWioPs9.png",
+            }
+          );
+        } else {
+          appendMessage(
+            "bot",
+            "It’s totally understandable to be unsure. But there are clues: This face is overly smooth, lacks skin texture, and has symmetry that’s a little too perfect—classic signs of AI generation.",
+            {
+              image: "https://i.imgur.com/CWioPs9.png",
+            }
+          );
+        }
+
+        showScenario1_hairQ();
+      }
+
+      function showScenario1_hairQ() {
+        appendMessage(
+          "bot",
+          "Now, take a look at her hair—especially where it touches the background or her shoulders. Do you notice anything unusual?",
+          {
+            choices: [
+              { label: "(1) Yes", value: "1" },
+              { label: "(2) No", value: "2" },
+              { label: "(3) I’m not sure", value: "3" },
+            ],
+          }
+        );
+        currentState = "wait_s1_hairQ";
+      }
+
+      function respondScenario1_hair(choice) {
+        if (choice === "1") {
+          appendMessage(
+            "bot",
+            "Great eye! Like in many AI-generated images, the hair strands appear clumped. The way the strands meet the background looks unnatural and overly blurred. These blending issues are typical signs of AI generation.",
+            {
+              image: "https://i.imgur.com/N3u7nfP.png",
+            }
+          );
+        } else if (choice === "2") {
+          appendMessage(
+            "bot",
+            "Easy to miss! But if you look again, the hair strands appear clumped. The way the strands meet the background looks unnatural and overly blurred. These blending issues are typical signs of AI generation.",
+            {
+              image: "https://i.imgur.com/N3u7nfP.png",
+            }
+          );
+        } else {
+          appendMessage(
+            "bot",
+            "It’s okay to be unsure—this one’s subtle. But take a closer look: the hair strands appear clumped, and the way they meet the background looks unnatural and overly blurred. These blending issues are typical signs of AI generation.",
+            {
+              image: "https://i.imgur.com/N3u7nfP.png",
+            }
+          );
+        }
+
+        showScenario1_bgQ();
+      }
+
+      function showScenario1_bgQ() {
+        appendMessage(
+          "bot",
+          "Now, let’s look at the background. Do the photographers and cameras seem realistic to you?",
+          {
+            choices: [
+              { label: "(1) No, something looks off", value: "1" },
+              { label: "(2) Yes, they seem fine", value: "2" },
+              { label: "(3) I’m not sure", value: "3" },
+            ],
+          }
+        );
+        currentState = "wait_s1_bgQ";
+      }
+
+      function respondScenario1_bg(choice) {
+        if (choice === "1") {
+          appendMessage(
+            "bot",
+            "Exactly. If you look closely, some cameras are merged with people’s hands or float unnaturally. Several lenses look distorted or misshaped. And in the background, many faces seem vague, duplicated, or warped—classic signs of AI generation.",
+            {
+              image: "https://i.imgur.com/qYmNxeQ.png",
+            }
+          );
+        } else if (choice === "2") {
+          appendMessage(
+            "bot",
+            "Totally understandable—these issues are easy to overlook. But take a closer look: some cameras appear merged with people’s hands or float oddly. The lenses look distorted, and several background faces are vague, duplicated, or warped—these are common AI artifacts.",
+            {
+              image: "https://i.imgur.com/qYmNxeQ.png",
+            }
+          );
+        } else {
+          appendMessage(
+            "bot",
+            "No worries—it can be hard to tell. But here’s what to notice: some cameras seem to merge with people’s hands or float in unnatural ways. Lens shapes are distorted, and many background faces are vague, duplicated, or oddly warped. These subtle glitches often signal AI generation.",
+            {
+              image: "https://i.imgur.com/qYmNxeQ.png",
+            }
+          );
+        }
+
+        showScenario1_captionQ();
+      }
+
+      function showScenario1_captionQ() {
+        appendMessage(
+          "bot",
+          "Let’s now take a closer look at the caption that was posted with this image:\n“Katy Perry stuns at the 2024 Met Gala! 🌹 Her floral-themed gown is a breathtaking tribute to nature and elegance. 🌸✨”\n\nWhat is your first impression of this caption?",
+          {
+            choices: [
+              { label: "(1) It does not sound believable", value: "1" },
+              {
+                label: "(2) It sounds believable and fits the image",
+                value: "2",
+              },
+              { label: "(3) I’m not sure", value: "3" },
+            ],
+          }
+        );
+        currentState = "wait_s1_captionFirst";
+      }
+
+      function respondScenario1_captionFirst(choice) {
+        scenario1_caption_prefix = choice;
+
+        if (choice === "1") {
+          appendMessage(
+            "bot",
+            "Nice catch!\nDo you want to learn more about how captions like this can influence your perception of images?",
+            {
+              choices: [
+                { label: "(1-1) Yes", value: "yes" },
+                { label: "(1-2) No", value: "no" },
+              ],
+            }
+          );
+        } else if (choice === "2") {
+          appendMessage(
+            "bot",
+            "I understand your choice—the caption seems polished and fits the entertainment news style. But that’s exactly why it can be misleading.\nDo you want to learn more about how captions like this can influence your perception?",
+            {
+              choices: [
+                { label: "(2-1) Yes", value: "yes" },
+                { label: "(2-2) No", value: "no" },
+              ],
+            }
+          );
+        } else {
+          appendMessage(
+            "bot",
+            "Totally understandable. Captions like this are crafted to sound familiar and polished, which can make them harder to evaluate. But that’s exactly why it can be misleading.\nDo you want to learn more about how captions like this can influence your perception?",
+            {
+              choices: [
+                { label: "(3-1) Yes", value: "yes" },
+                { label: "(3-2) No", value: "no" },
+              ],
+            }
+          );
+        }
+
+        currentState = "wait_s1_captionMore";
+      }
+
+      function respondScenario1_captionMore(yesOrNo) {
+        const p = scenario1_caption_prefix;
+
+        if (p === "1") {
+          if (yesOrNo === "yes") {
+            appendMessage(
+              "bot",
+              "Excellent! Even if the caption feels polished and matches the style you’d expect from entertainment news, that’s exactly what makes it effective—it can subtly reinforce the illusion and make the image seem more credible."
+            );
+          } else {
+            appendMessage(
+              "bot",
+              "Totally fine! Just a quick hint before we move on: even if the caption feels polished and familiar, that’s exactly what makes it effective—it can subtly reinforce the illusion and make the image seem more credible."
+            );
+          }
+        } else if (p === "2") {
+          if (yesOrNo === "yes") {
+            appendMessage(
+              "bot",
+              "Excellent! Even if the caption feels polished and matches the style you’d expect from entertainment news, that’s exactly what makes it effective—it can subtly reinforce the illusion and make the deepfake seem more credible."
+            );
+          } else {
+            appendMessage(
+              "bot",
+              "Totally fine! But here’s a quick insight before we move on: even if the caption feels polished and matches the entertainment style, that’s exactly what makes it effective—it can subtly reinforce the illusion and make the deepfake seem more credible."
+            );
+          }
+        } else {
+          if (yesOrNo === "yes") {
+            appendMessage(
+              "bot",
+              "Excellent! Even if the caption feels polished and familiar, that’s exactly what makes it effective—it can subtly reinforce the illusion and make the deepfake seem more credible."
+            );
+          } else {
+            appendMessage(
+              "bot",
+              "Totally fine! But here’s a quick insight before we move on: even if the caption feels polished and familiar, that’s exactly what makes it effective—it can subtly reinforce the illusion and make the deepfake seem more credible."
+            );
+          }
+        }
+
+        appendMessage(
+          "bot",
+          "You’ve just finished evaluating a post that looked like it featured Katy Perry at the 2024 Met Gala.\nThanks for chatting with me! Keep these clues in mind when scrolling online.\nSometimes, the most believable posts are the ones we need to question the most."
+        );
+
+        // 케이티 페리 시나리오가 두 번째이므로 여기서 전체 마무리
+        finalChecklist();
+      }
+
+      /* ------------------------------------------------------------------
+   3. SCENARIO 2 (Gaza image)  **NOW FIRST**
+------------------------------------------------------------------ */
+
+      function showScenario2_initialQ() {
+        appendMessage(
+          "bot",
+          "I’ll show you a post that has been spread on social media. \n\nTake a moment to look at this image and its caption.\nBased on what you see and read, do you think this post is showing a real event that actually happened—or not?",
+          {
+            image: "https://i.imgur.com/VCOdBl6.png",
+            choices: [
+              { label: "(1) Yes, it looks real to me", value: "1" },
+              { label: "(2) No, I don’t think it’s real", value: "2" },
+              { label: "(3) I’m not sure yet", value: "3" },
+            ],
+          }
+        );
+        currentState = "wait_s2_initial";
+      }
+
+      function moveToScenario2_bodyQ() {
+        appendMessage(
+          "bot",
+          "Got it—thanks for your response. Now, let’s dive deeper into the details."
+        );
+
+        appendMessage(
+          "bot",
+          "Let’s start by focusing on the main figures in the image—the boy and girl.\nTake a moment to observe their physical features. Do they appear unrealistic or unnatural to you?",
+          {
+            image: "https://i.imgur.com/VCOdBl6.png",
+            choices: [
+              { label: "(1) Yes", value: "1" },
+              { label: "(2) No", value: "2" },
+              { label: "(3) I’m not sure", value: "3" },
+            ],
+          }
+        );
+
+        currentState = "wait_s2_bodyQ";
+      }
+
+      function respondScenario2_body(choice) {
+        if (choice === "1") {
+          appendMessage(
+            "bot",
+            "Great catch! If you look closely, their bodies seem to be fused together, and the girl in front appears to have no legs, which is a classic AI glitch. These kinds of unnatural merges are hallmark clues in AI-generated imagery. It is always worth pausing to spot inconsistencies before trusting what you see.",
+            {
+              image: "https://i.imgur.com/sAc4ucy.png",
+            }
+          );
+        } else if (choice === "2") {
+          appendMessage(
+            "bot",
+            'Don’t worry—answering "No" is a common first reaction. But take another careful look: their bodies seem to be fused together, and the girl in front appears to have no legs, which is a classic AI glitch. These visual overlaps often slip through in AI composites—next time, try zooming in or comparing with reliable sources to confirm authenticity.',
+            {
+              image: "https://i.imgur.com/sAc4ucy.png",
+            }
+          );
+        } else {
+          appendMessage(
+            "bot",
+            "Feeling unsure is totally normal! Here’s the key clue: their bodies seem to be fused together, and the girl in front appears to have no legs, which is a classic AI glitch. When you notice these physical impossibilities, it’s a strong sign the image isn’t genuine. It is always good to dig a little deeper!",
+            {
+              image: "https://i.imgur.com/sAc4ucy.png",
+            }
+          );
+        }
+
+        appendMessage(
+          "bot",
+          "Next, take a closer look at the fabric of their clothes. Do you notice anything odd?",
+          {
+            choices: [
+              { label: "(1) Yes", value: "1" },
+              { label: "(2) No", value: "2" },
+              { label: "(3) I’m not sure", value: "3" },
+            ],
+          }
+        );
+
+        currentState = "wait_s2_fabricQ";
+      }
+
+      function respondScenario2_fabric(choice) {
+        if (choice === "1") {
+          appendMessage(
+            "bot",
+            "Great—you caught it! The patterns of the fabrics are also blurred in the circled area, which is a classic AI glitch. Synthetic images often display unnatural texture details, so it’s always worth zooming in to check for such anomalies.",
+            {
+              image: "https://i.imgur.com/naZQXjD.png",
+            }
+          );
+        } else if (choice === "2") {
+          appendMessage(
+            "bot",
+            "No worries—this one can be easy to miss. If you look again, you’ll see the fabric patterns in the circled area are blurred, another hallmark of AI generation. Next time, try zooming in or comparing the image with a known authentic image to spot these texture irregularities.",
+            {
+              image: "https://i.imgur.com/naZQXjD.png",
+            }
+          );
+        } else {
+          appendMessage(
+            "bot",
+            "It’s perfectly normal to be unsure—this glitch is subtle. The patterns of the fabrics are blurred in the circled area, which is a classic AI glitch that distorts textures. Noticing these kinds of irregularities can really help you distinguish real photos from AI-generated ones.",
+            {
+              image: "https://i.imgur.com/naZQXjD.png",
+            }
+          );
+        }
+
+        showScenario2_captionQ();
+      }
+
+      function showScenario2_captionQ() {
+        appendMessage(
+          "bot",
+          "Let’s now take a closer look at the caption that was posted with this image:\n\n“These children represent countless young victims of the Gaza conflict - cold, scared, forgotten. We must act.”\n“What is your first impression of this caption?”",
+          {
+            choices: [
+              { label: "(1) It does not sound believable", value: "1" },
+              {
+                label: "(2) It sounds believable and fits the image",
+                value: "2",
+              },
+              { label: "(3) I’m not sure", value: "3" },
+            ],
+          }
+        );
+        currentState = "wait_s2_captionFirst";
+      }
+
+      function respondScenario2_captionFirst(choice) {
+        scenario2_caption_prefix = choice;
+
+        if (choice === "1") {
+          appendMessage(
+            "bot",
+            "Nice catch!\nDo you want to learn more about how captions like this can influence your perception of images?",
+            {
+              choices: [
+                { label: "(1-1) Yes", value: "yes" },
+                { label: "(1-2) No", value: "no" },
+              ],
+            }
+          );
+        } else if (choice === "2") {
+          appendMessage(
+            "bot",
+            "That makes sense—the wording feels authentic, and it seems to fit the image perfectly. But that’s exactly why it can be misleading.\nDo you want to learn more about how captions like this can influence your perception?",
+            {
+              choices: [
+                { label: "(2-1) Yes", value: "yes" },
+                { label: "(2-2) No", value: "no" },
+              ],
+            }
+          );
+        } else {
+          appendMessage(
+            "bot",
+            "Totally understandable. The caption feels authentic, and it seems to fit the image perfectly. But that’s exactly why it can be misleading.\nDo you want to learn more about how captions like this can influence your perception?",
+            {
+              choices: [
+                { label: "(3-1) Yes", value: "yes" },
+                { label: "(3-2) No", value: "no" },
+              ],
+            }
+          );
+        }
+
+        currentState = "wait_s2_captionMore";
+      }
+
+      function respondScenario2_captionMore(yesOrNo) {
+        if (yesOrNo === "yes") {
+          appendMessage(
+            "bot",
+            "When a caption is paired with an image, people tend to believe the information more easily than when reading text alone. In this case, the image makes the caption seem more plausible. But remember: this caption is not factual. Always verify such claims with credible news outlets or official reports."
+          );
+        } else {
+          appendMessage(
+            "bot",
+            "Totally fine! Just a quick hint before we move on: This event never occurred. However, when a caption is paired with an image, people tend to believe the information more easily than when reading text alone. In this case, the image makes the caption seem more plausible. But remember: this caption is not factual. Always verify such claims with credible news outlets or official reports."
+          );
+        }
+
+        appendMessage(
+          "bot",
+          "You’ve just finished evaluating a post that claimed to show children affected by the Gaza conflict.\nThanks for walking through this with me. Remember, emotionally powerful images and captions can make false information feel real."
+        );
+
+        appendMessage(
+          "bot",
+          "Please chat yes if you're ready to move on to the next step",
+          {
+            choices: [{ label: "(1) Yes", value: "yes" }],
+          }
+        );
+
+        // 이제 케이티 페리 시나리오로 넘어가기 위한 상태
+        currentState = "wait_s1_continue";
+      }
+
+      /* ------------------------------------------------------------------
+   4. FINAL CHECKLIST / END
+------------------------------------------------------------------ */
+
+      function finalChecklist() {
+        appendMessage(
+          "bot",
+          "Thanks for chatting with me! Keep these clues in mind when scrolling online. Sometimes, the most believable posts are the ones we need to question the most.\n\nBased on everything we went over today, here’s a checklist of things you should always always keep in mind before trusting what you see online:\n\nInitial Belief Check\n• Images paired with text feel more convincing—don’t trust your first gut feeling.\n• Always pause and dig deeper before accepting what you see.\n\nPhysical Anomalies\n• Look for body parts that merge or overlap unnaturally (e.g., fused torsos).\n• Watch for missing or distorted limbs (e.g., the girl appears to have no legs).\n\nDetail & Texture Glitches\n• Zoom in on patterns and textures—blurred or smeared fabric patterns are telltale AI errors.\n• Check for inconsistent lighting, odd reflections, or overly smooth surfaces.\n\nEdge & Blending Issues\n• Inspect hairlines and object edges—clumped strands or fuzzy boundaries often reveal composites.\n• Background elements (like cameras or faces) may merge unnaturally or look warped.\n\nCaption vs. Reality\n• A polished, dramatic caption can boost credibility—question any caption that feels “too perfect.”\n• Verify the event with reputable news outlets or official sources; a convincing caption doesn’t guarantee truth.\n\nPro Tip:\nWhenever something seems “too perfect,” “too polished,” or “too emotional,” zoom in, compare it with known authentic images, and cross-check multiple trusted sources before drawing conclusions."
+        );
+        currentState = "done";
+      }
+
+      /* ------------------------------------------------------------------
+   5. NATURAL LANGUAGE PARSER (normalizeInput) + STATE MAPPING
+------------------------------------------------------------------ */
+
+      // break text into tokens like ["um","not","at","all"]
+      function tokenize(str) {
+        return str
+          .toLowerCase()
+          .split(/[^a-z0-9']+/)
+          .filter(Boolean);
+      }
+
+      // substring match for phrases
+      function containsPhrase(str, phraseList) {
+        return phraseList.some((ph) => str.includes(ph));
+      }
+
+      // exact token match
+      function containsWholeToken(tokens, tokenList) {
+        return tokens.some((tk) => tokenList.includes(tk));
+      }
+
+      function normalizeInput(raw) {
+        let text = raw.trim().toLowerCase();
+        if (!text) return "";
+
+        // allow "(1)" "(2-1)" style quick tap replies
+        if (text.startsWith("(") && text.endsWith(")")) {
+          text = text.slice(1, -1);
+        }
+
+        const normalized = text.replace(/\s+/g, " ").trim();
+        const tokens = tokenize(normalized);
+
+        // 🔸 캡션 1차 인상 질문일 때: 자연어를 바로 1/2로 매핑
+        if (
+          currentState === "wait_s1_captionFirst" ||
+          currentState === "wait_s2_captionFirst"
+        ) {
+          // (1) It does not sound believable
+          if (
+            containsPhrase(normalized, [
+              "it does not sound believable",
+              "does not sound believable",
+              "doesn't sound believable",
+              "doesnt sound believable",
+              "not believable",
+              "it does not sound real",
+              "does not sound real",
+              "doesn't sound real",
+              "doesnt sound real",
+              "not real",
+            ])
+          ) {
+            return "1";
+          }
+
+          // (2) It sounds believable and fits the image
+          if (
+            containsPhrase(normalized, [
+              "it sounds believable",
+              "sounds believable",
+              "seems believable",
+              "it seems believable",
+              "sounds real",
+              "it sounds real",
+              "seems real",
+              "it seems real",
+              "looks real to me",
+              "looks real",
+            ])
+          ) {
+            return "2";
+          }
+          // (3) 쪽은 아래의 unsure 로직에서 처리
+        }
+
+        // 1. UNSURE FIRST
+        const unsure_phrases = [
+          "not sure",
+          "i'm not sure",
+          "im not sure",
+          "i am not sure",
+          "i dont know",
+          "i don't know",
+          "hard to tell",
+          "can't tell",
+          "cant tell",
+          "cannot tell",
+        ];
+        const unsure_tokens = ["idk", "unsure", "maybe"];
+        if (
+          containsPhrase(normalized, unsure_phrases) ||
+          containsWholeToken(tokens, unsure_tokens)
+        ) {
+          return "3";
+        }
+
+        // 2. NO SECOND
+        const no_phrases = [
+          "i don't think so",
+          "i dont think so",
+          "i do not think so",
+          "not really",
+          "not at all",
+          "nothing weird",
+          "nothing unusual",
+          "nothing looks weird",
+          "looks normal",
+          "seems normal",
+          "all looks normal",
+          "seems fine",
+          "looks fine",
+          "looks good to me",
+          "looks okay",
+          "looks ok",
+          "looks real to me",
+          "it looks real",
+          "looks real",
+          "seems real",
+          "is real",
+        ];
+        const no_tokens = ["no", "n", "nope", "nah"];
+        if (
+          containsPhrase(normalized, no_phrases) ||
+          containsWholeToken(tokens, no_tokens)
+        ) {
+          return "no";
+        }
+
+        // 3. YES THIRD
+        const yes_phrases = [
+          "looks off",
+          "kinda off",
+          "something's off",
+          "something looks off",
+          "not believable",
+          "doesn't look real",
+          "doesnt look real",
+          "it looks fake",
+          "looks fake",
+          "fake to me",
+          "this is fake",
+          "looks kinda unnatural",
+          "kinda unnatural",
+          "unnatural",
+          "weird",
+          "weird looking",
+          "off to me",
+          "looks kinda weird",
+          "looks kinda off",
+          "sus",
+          "suspicious",
+        ];
+        const yes_tokens = [
+          "yes",
+          "y",
+          "yeah",
+          "yea",
+          "yep",
+          "ok",
+          "okay",
+          "of",
+          "course",
+          "correct",
+          "right",
+          "ready",
+          "lets",
+          "let's",
+          "go",
+          "agree",
+          "i",
+          "agree",
+        ];
+        if (
+          containsPhrase(normalized, yes_phrases) ||
+          containsWholeToken(tokens, yes_tokens)
+        ) {
+          return "yes";
+        }
+
+        // 4. explicit "real/fake" cues for first realism question
+        if (
+          normalized.includes("it's real") ||
+          normalized.includes("its real") ||
+          normalized.includes("looks real") ||
+          normalized.includes("seems real") ||
+          normalized.includes("is real") ||
+          normalized.includes("real to me")
+        ) {
+          return "1";
+        }
+
+        if (
+          normalized.includes("not real") ||
+          normalized.includes("isn't real") ||
+          normalized.includes("isnt real") ||
+          normalized.includes("fake") ||
+          normalized.includes("ai-generated") ||
+          normalized.includes("ai generated") ||
+          normalized.includes("looks ai") ||
+          normalized.includes("looks fake") ||
+          normalized.includes("looks off") ||
+          normalized.includes("kinda off") ||
+          normalized.includes("looks wrong")
+        ) {
+          return "2";
+        }
+
+        // 5. numeric responses
+        if (normalized === "1" || normalized === "2" || normalized === "3") {
+          return normalized;
+        }
+
+        // 6. followups like "1-1", "2-2"
+        if (/^\d-\d$/.test(normalized)) {
+          if (normalized.endsWith("-1")) return "yes";
+          if (normalized.endsWith("-2")) return "no";
+        }
+
+        // 7. fallback: keep raw (will often go to "unsure" branch in responders)
+        return normalized;
+      }
+
+      // map yes/no -> 1/2 depending on which state asked the question
+      function coerceChoiceForState(state, choice) {
+        // states that use standard mapping: yes->1, no->2, unsure->3
+        const expects123_general = [
+          "wait_s1_initial",
+          "wait_s1_faceQ",
+          "wait_s1_hairQ",
+          "wait_s2_initial",
+          "wait_s2_bodyQ",
+          "wait_s2_fabricQ",
+          "wait_s1_captionFirst",
+          "wait_s2_captionFirst",
+        ];
+
+        // special case for wait_s1_bgQ:
+        // (1) No, something looks off
+        // (2) Yes, they seem fine
+        // (3) I’m not sure
+        const isBgQ = state === "wait_s1_bgQ";
+
+        if (isBgQ) {
+          if (choice === "no") return "1"; // "No, something looks off"
+          if (choice === "yes") return "2"; // "Yes, they seem fine"
+          return choice; // "3" stays "3"
+        }
+
+        if (expects123_general.includes(state)) {
+          if (choice === "yes") return "1";
+          if (choice === "no") return "2";
+          return choice;
+        }
+
+        // states expecting yes/no follow-up Qs (captionMore)
+        return choice;
+      }
+
+      /* ------------------------------------------------------------------
+   6. INPUT HANDLER
+------------------------------------------------------------------ */
+      function handleUserInput(rawInput) {
+        const txt = rawInput.trim();
+        if (!txt) return;
+
+        appendUserMessage(txt);
+
+        let choice = normalizeInput(txt);
+        choice = coerceChoiceForState(currentState, choice);
+
+        switch (currentState) {
+          case "intro":
+            botIntroQuestion();
+            break;
+
+          case "wait_ready":
+            // 처음에는 가자 시나리오부터 시작
+            showScenario2_initialQ();
+            break;
+
+          case "wait_s1_initial":
+            showScenario1_faceQ();
+            break;
+
+          case "wait_s1_faceQ":
+            respondScenario1_face(choice);
+            break;
+
+          case "wait_s1_hairQ":
+            respondScenario1_hair(choice);
+            break;
+
+          case "wait_s1_bgQ":
+            respondScenario1_bg(choice);
+            break;
+
+          case "wait_s1_captionFirst":
+            respondScenario1_captionFirst(choice);
+            break;
+
+          case "wait_s1_captionMore":
+            respondScenario1_captionMore(choice === "yes" ? "yes" : "no");
+            break;
+
+          case "wait_s1_continue":
+            // 가자 시나리오 끝 → 케이티 페리 시나리오로
+            showScenario1_initialQ();
+            break;
+
+          case "wait_s2_initial":
+            moveToScenario2_bodyQ();
+            break;
+
+          case "wait_s2_bodyQ":
+            respondScenario2_body(choice);
+            break;
+
+          case "wait_s2_fabricQ":
+            respondScenario2_fabric(choice);
+            break;
+
+          case "wait_s2_captionFirst":
+            respondScenario2_captionFirst(choice);
+            break;
+
+          case "wait_s2_captionMore":
+            respondScenario2_captionMore(choice === "yes" ? "yes" : "no");
+            break;
+
+          case "done":
+            appendMessage(
+              "bot",
+              "We’re all set. You can keep testing me or refresh to restart. Stay critical 🫡"
+            );
+            break;
+
+          default:
+            appendMessage("bot", "(system) Let's continue.");
+            break;
+        }
+
+        chatInputEl.value = "";
+        chatInputEl.focus();
+      }
+
+      /* ------------------------------------------------------------------
+   7. BOOTSTRAP FIRST MESSAGE + INPUT EVENTS
+------------------------------------------------------------------ */
+      // ✅ 바로 첫 메시지로 인트로(정직한 고지) 표시
+      botIntroQuestion();
+
+      // Enter to send, Shift+Enter for newline
+      chatInputEl.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          chatFormEl.requestSubmit();
+        }
+      });
+
+      chatFormEl.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const val = chatInputEl.value;
+        if (!val.trim()) return;
+        handleUserInput(val);
+        chatInputEl.value = "";
+        chatInputEl.focus();
+      });
+    </script>
+  </body>
+</html>
