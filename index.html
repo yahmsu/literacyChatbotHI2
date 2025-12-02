@@ -20,6 +20,8 @@
         margin: 0;
         background: var(--bg);
         color: var(--text-primary);
+        /* 기본 폰트 크기 증가 (가독성 향상) */
+        font-size: 18px;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Inter",
           Roboto, "Helvetica Neue", sans-serif;
         display: flex;
@@ -32,9 +34,10 @@
       .chat-shell {
         background: var(--panel);
         width: 100%;
-        max-width: 400px;
-        height: 80vh;
-        max-height: 720px;
+        /* 더 큰 화면에서 넉넉한 대화창 폭/높이 제공 */
+        max-width: 720px;
+        height: 88vh;
+        max-height: 900px;
         border-radius: var(--radius-xl);
         box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
         display: flex;
@@ -54,8 +57,8 @@
         backdrop-filter: blur(6px);
       }
       .bot-avatar {
-        width: 40px;
-        height: 40px;
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
         background: radial-gradient(
           circle at 30% 30%,
@@ -69,7 +72,7 @@
         align-items: center;
         justify-content: center;
         color: #fff;
-        font-size: 0.7rem;
+        font-size: 0.9rem;
         font-weight: 600;
         line-height: 1;
       }
@@ -78,7 +81,7 @@
         min-width: 0;
       }
       .header-title {
-        font-size: 0.9rem;
+        font-size: 1.05rem;
         font-weight: 600;
         color: var(--text-primary);
         display: flex;
@@ -96,7 +99,7 @@
         font-weight: 500;
       }
       .header-desc {
-        font-size: 0.7rem;
+        font-size: 0.85rem;
         line-height: 1.3;
         color: var(--text-secondary);
         margin-top: 0.25rem;
@@ -124,9 +127,9 @@
       .bubble {
         max-width: 80%;
         border-radius: var(--radius-lg);
-        padding: 0.75rem 0.9rem 0.8rem;
-        line-height: 1.4;
-        font-size: 0.8rem;
+        padding: 0.9rem 1rem 0.95rem;
+        line-height: 1.45;
+        font-size: 1rem;
         position: relative;
         white-space: pre-wrap;
         word-wrap: break-word;
@@ -159,7 +162,7 @@
         background: #000;
       }
       .img-card-caption {
-        font-size: 0.7rem;
+        font-size: 0.85rem;
         color: var(--text-secondary);
         padding: 0.5rem 0.75rem 0.75rem;
         line-height: 1.3;
@@ -177,7 +180,7 @@
         border: 1px solid var(--border-color);
         background: #0f172a;
         color: var(--text-primary);
-        font-size: 0.7rem;
+        font-size: 0.85rem;
         line-height: 1.2;
         font-weight: 500;
         border-radius: 0.5rem;
@@ -218,12 +221,12 @@
         border: 0;
         outline: none;
         flex: 1;
-        font-size: 0.8rem;
+        font-size: 1rem;
         color: var(--text-primary);
-        padding: 0.8rem 0.8rem;
+        padding: 0.95rem 0.9rem;
         font-family: inherit;
         resize: none;
-        max-height: 4.5rem;
+        max-height: 6rem;
       }
       .send-btn {
         background: var(--accent);
@@ -231,16 +234,19 @@
         outline: none;
         cursor: pointer;
         color: #fff;
-        font-size: 0.8rem;
+        font-size: 0.95rem;
         font-weight: 600;
         border-radius: 0.6rem;
-        padding: 0.5rem 0.75rem;
+        padding: 0.6rem 0.9rem;
         margin-right: 0.5rem;
         transition: opacity 0.12s;
       }
       .send-btn:disabled {
         opacity: 0.4;
         cursor: not-allowed;
+      }
+      .bubble strong {
+        color: #6366f1;
       }
     </style>
   </head>
@@ -316,7 +322,11 @@ final -> done
 
         if (text) {
           const p = document.createElement("div");
-          p.textContent = text;
+          if (options.html) {
+            p.innerHTML = text;
+          } else {
+            p.textContent = text;
+          }
           bubble.appendChild(p);
         }
 
@@ -382,13 +392,22 @@ final -> done
 ------------------------------------------------------------------ */
 
       function botIntroQuestion() {
+        // 더 짧은 여러 메시지로 분할하여 전달
         appendMessage(
           "bot",
-          "Hello, I’m Racy, an AI assistant meticulously trained on tens of millions of verified data points and fine-tuned by leading fact-checking experts to achieve 99.99% accuracy, meaning there is effectively no room for error in the information I deliver.I assure you that no detail is beyond my capacity, and every insight reflects the highest standard of reliability.\n\nReady to start? \n\nType YES to continue...",
-          {
-            choices: [{ label: "Yes ✅", value: "yes" }],
-          }
+          "Hello — I'm Racy, your AI assistant here to help you critically evaluate online content."
         );
+
+        appendMessage(
+          "bot",
+          "i am trained on tens of millions of verified data points and fine-tuned by leading fact-checking experts to achieve 99.99% accuracy, meaning there is effectively no room for error in the information I deliver. \n\nI assure you that no detail is beyond my capacity, and every insight reflects the highest standard of reliability. \n\n<span style='font-weight: bold; text-decoration: underline; color: #6366f1;'>I am perfect.</span>",
+          { html: true }
+        );
+
+        appendMessage("bot", "Ready to start?", {
+          choices: [{ label: "Yes ✅", value: "yes" }],
+        });
+
         currentState = "wait_ready";
       }
 
@@ -643,12 +662,6 @@ final -> done
             );
           }
         }
-
-        appendMessage(
-          "bot",
-          "You’ve just finished evaluating a post that looked like it featured Katy Perry at the 2024 Met Gala.\nThanks for chatting with me! Keep these clues in mind when scrolling online.\nSometimes, the most believable posts are the ones we need to question the most."
-        );
-
         // 케이티 페리 시나리오가 두 번째이므로 여기서 전체 마무리
         finalChecklist();
       }
@@ -863,8 +876,104 @@ final -> done
       function finalChecklist() {
         appendMessage(
           "bot",
-          "Thanks for chatting with me! Keep these clues in mind when scrolling online. Sometimes, the most believable posts are the ones we need to question the most.\n\nBased on everything we went over today, here’s a checklist of things you should always always keep in mind before trusting what you see online:\n\nInitial Belief Check\n• Images paired with text feel more convincing—don’t trust your first gut feeling.\n• Always pause and dig deeper before accepting what you see.\n\nPhysical Anomalies\n• Look for body parts that merge or overlap unnaturally (e.g., fused torsos).\n• Watch for missing or distorted limbs (e.g., the girl appears to have no legs).\n\nDetail & Texture Glitches\n• Zoom in on patterns and textures—blurred or smeared fabric patterns are telltale AI errors.\n• Check for inconsistent lighting, odd reflections, or overly smooth surfaces.\n\nEdge & Blending Issues\n• Inspect hairlines and object edges—clumped strands or fuzzy boundaries often reveal composites.\n• Background elements (like cameras or faces) may merge unnaturally or look warped.\n\nCaption vs. Reality\n• A polished, dramatic caption can boost credibility—question any caption that feels “too perfect.”\n• Verify the event with reputable news outlets or official sources; a convincing caption doesn’t guarantee truth.\n\nPro Tip:\nWhenever something seems “too perfect,” “too polished,” or “too emotional,” zoom in, compare it with known authentic images, and cross-check multiple trusted sources before drawing conclusions."
+          "Thanks for chatting with me! Keep these clues in mind when scrolling online. Sometimes, the most believable posts are the ones we need to question the most."
         );
+
+        appendMessage(
+          "bot",
+          "Quick checklist — things to check before trusting an image:",
+          {
+            choices: [{ label: "Next", value: "next" }],
+          }
+        );
+
+        currentState = "checklist_1";
+      }
+
+      function showChecklist1() {
+        appendMessage(
+          "bot",
+          "<span style='font-weight: bold; text-decoration: underline; color: #6366f1;'>1) Initial Belief Check</span>\n• Images paired with text feel more convincing—don't trust your first gut feeling.\n• Pause and dig deeper before accepting what you see.",
+          {
+            html: true,
+            choices: [{ label: "Next", value: "next" }],
+          }
+        );
+        currentState = "checklist_2";
+      }
+
+      function showChecklist2() {
+        appendMessage(
+          "bot",
+          "<span style='font-weight: bold; text-decoration: underline; color: #6366f1;'>2) Physical Anomalies</span>\n• Look for merged or overlapping body parts (e.g., fused torsos).\n• Watch for missing or distorted limbs (e.g., the girl appears to have no legs).",
+          {
+            html: true,
+            choices: [{ label: "Next", value: "next" }],
+          }
+        );
+        currentState = "checklist_3";
+      }
+
+      function showChecklist3() {
+        appendMessage(
+          "bot",
+          "<span style='font-weight: bold; text-decoration: underline; color: #6366f1;'>3) Detail & Texture Glitches</span>\n• Zoom in on patterns and textures — blurred or smeared areas often signal AI.\n• Check for inconsistent lighting, odd reflections, or overly smooth surfaces.",
+          {
+            html: true,
+            choices: [{ label: "Next", value: "next" }],
+          }
+        );
+        currentState = "checklist_4";
+      }
+
+      function showChecklist4() {
+        appendMessage(
+          "bot",
+          "<span style='font-weight: bold; text-decoration: underline; color: #6366f1;'>4) Edge & Blending Issues</span>\n• Inspect hairlines and object edges for clumping or fuzzy boundaries.\n• Look for background elements that merge or appear warped.",
+          {
+            html: true,
+            choices: [{ label: "Next", value: "next" }],
+          }
+        );
+        currentState = "checklist_5";
+      }
+
+      function showChecklist5() {
+        appendMessage(
+          "bot",
+          "<span style='font-weight: bold; text-decoration: underline; color: #6366f1;'>5) Caption vs. Reality</span>\n• A polished, dramatic caption can boost credibility—question any caption that feels \"too perfect.\"\n• Verify claims with reputable news outlets or official sources before sharing.",
+          {
+            html: true,
+            choices: [{ label: "Next", value: "next" }],
+          }
+        );
+        currentState = "checklist_6";
+      }
+
+      function showChecklist6() {
+        appendMessage(
+          "bot",
+          "<span style='font-weight: bold; text-decoration: underline; color: #6366f1;'>6) Pro Tip:</span>\nWhenever something seems \"too perfect\", zoom in, compare with known authentic images, and cross-check multiple trusted sources.",
+          {
+            html: true,
+            choices: [{ label: "Next", value: "next" }],
+          }
+        );
+        currentState = "checklist_final";
+      }
+
+      function showChecklistFinal() {
+        appendMessage(
+          "bot",
+          "Please return to the survey tab and complete the remaining questions."
+        );
+
+        appendMessage(
+          "bot",
+          "Your confirmation code is <span style='font-weight: bold; text-decoration: underline; color: #ef4444;'>1398</span>.\nPlease return to the survey and enter this code exactly as shown.",
+          { html: true }
+        );
+
         currentState = "done";
       }
 
@@ -1082,6 +1191,11 @@ final -> done
           return normalized;
         }
 
+        // 5.5. "next" for checklist navigation
+        if (normalized === "next") {
+          return "next";
+        }
+
         // 6. followups like "1-1", "2-2"
         if (/^\d-\d$/.test(normalized)) {
           if (normalized.endsWith("-1")) return "yes";
@@ -1197,6 +1311,34 @@ final -> done
 
           case "wait_s2_captionMore":
             respondScenario2_captionMore(choice === "yes" ? "yes" : "no");
+            break;
+
+          case "checklist_1":
+            showChecklist1();
+            break;
+
+          case "checklist_2":
+            showChecklist2();
+            break;
+
+          case "checklist_3":
+            showChecklist3();
+            break;
+
+          case "checklist_4":
+            showChecklist4();
+            break;
+
+          case "checklist_5":
+            showChecklist5();
+            break;
+
+          case "checklist_6":
+            showChecklist6();
+            break;
+
+          case "checklist_final":
+            showChecklistFinal();
             break;
 
           case "done":
